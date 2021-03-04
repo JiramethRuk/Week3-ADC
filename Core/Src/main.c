@@ -45,19 +45,18 @@ ADC_HandleTypeDef hadc1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint16_t adcdata[2] = { 0 };
 int V25 = 760;
 float Avg_Slope = 2.5;
-float ADCOutputConverted ;
+float ADCOutputConverted = 0 ;
 int ADCMode = 0;
-
+int time = 0;
 
 typedef struct {
 	ADC_ChannelConfTypeDef Config;
-	uint16_t data;
+	uint32_t data;
 } ADCStructure;
 
-ADCStructure ADCChannel[3] = { 0 };
+ADCStructure ADCChannel[2] = { 0 };
 
 /* USER CODE END PV */
 
@@ -299,7 +298,8 @@ void ADCPollingMethodInit() {
 void ADCPollingMethodUpdate() {
 	GPIO_PinState Button[2];
 	Button[0]= HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
-	if(Button[0]==GPIO_PIN_RESET && Button[1]==GPIO_PIN_SET)
+
+	if(Button[0]==GPIO_PIN_RESET)
 	{
 		if(ADCMode == 0)
 		{
@@ -313,16 +313,16 @@ void ADCPollingMethodUpdate() {
 			{
 				//Get Value
 				ADCChannel[1].data = HAL_ADC_GetValue(&hadc1);
+				ADCOutputConverted = (((((ADCChannel[1].data * 3.3 * 1000) / 4096) - V25)/ Avg_Slope)+ 25);
 			}
 			//Stop
 			HAL_ADC_Stop(&hadc1);
-			ADCOutputConverted = (((((ADCChannel[1].data * 3.3) * 1000)- V25)/ Avg_Slope)+ 25);
 		}
-		else
+		else if(ADCMode == 1)
 		{
 			ADCMode = 0;
 			//Select Channel
-			HAL_ADC_ConfigChannel(&hadc1, &ADCChannel[1].Config);
+			HAL_ADC_ConfigChannel(&hadc1, &ADCChannel[0].Config);
 			//ADC sampling ,Convert
 			HAL_ADC_Start(&hadc1);
 			//Wait ADC
@@ -330,10 +330,10 @@ void ADCPollingMethodUpdate() {
 			{
 				//Get Value
 				ADCChannel[0].data = HAL_ADC_GetValue(&hadc1);
+				ADCOutputConverted = (((ADCChannel[0].data * 3.3) / 4096) * 1000);
 			}
 			//Stop
 			HAL_ADC_Stop(&hadc1);
-			ADCOutputConverted = (((ADCChannel[1].data * 3.3) / 4096) * 1000);
 		}
 	}
 	Button[1] = Button[0];
